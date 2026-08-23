@@ -12,3 +12,16 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+info:
+  app:
+    name: user-service
+    description: User management service
+    version: 0.0.1-SNAPSHOT
