@@ -10,6 +10,7 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
   flyway:
     enabled: true
 management:
