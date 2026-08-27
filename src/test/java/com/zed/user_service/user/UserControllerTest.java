@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.zed.user_service.common.GlobalExceptionHandler;
 import com.zed.user_service.config.PasswordConfig;
 import com.zed.user_service.config.SecurityConfig;
+import com.zed.user_service.auth.JwtService;
 import com.zed.user_service.user.dto.CreateUserRequest;
 import com.zed.user_service.user.dto.UpdateUserRequest;
 import com.zed.user_service.user.dto.UserResponse;
@@ -57,12 +58,15 @@ class UserControllerTest {
 	@MockitoBean
 	private UserDetailsService userDetailsService;
 
+	@MockitoBean
+	private JwtService jwtService;
+
 	@org.junit.jupiter.api.BeforeEach
 	void setUpAuthentication() {
 		when(userDetailsService.loadUserByUsername("user@example.com"))
 				.thenReturn(User.withUsername("user@example.com")
 						.password(new BCryptPasswordEncoder().encode("password123"))
-						.roles("USER")
+						.roles("ADMIN")
 						.build());
 	}
 
@@ -99,7 +103,7 @@ class UserControllerTest {
 
 	@Test
 	void getUsersReturnsUsers() throws Exception {
-		when(userService.getUsers()).thenReturn(List.of(response(1L)));
+		when(userService.getUsers(true)).thenReturn(List.of(response(1L)));
 
 		mockMvc.perform(get("/users")
 				.with(httpBasic("user@example.com", "password123")))
@@ -118,7 +122,8 @@ class UserControllerTest {
 
 	@Test
 	void getUserReturnsNotFoundError() throws Exception {
-		when(userService.getUser(1L)).thenThrow(new UserNotFoundException(1L));
+		when(userService.getUser(1L, "user@example.com", true))
+				.thenThrow(new UserNotFoundException(1L));
 
 		mockMvc.perform(get("/users/1")
 				.with(httpBasic("user@example.com", "password123")))
@@ -130,7 +135,11 @@ class UserControllerTest {
 	@Test
 	void updateUserReturnsUpdatedResponse() throws Exception {
 		UserResponse response = response(1L);
-		when(userService.updateUser(eq(1L), any(UpdateUserRequest.class))).thenReturn(response);
+		when(userService.updateUser(
+				eq(1L),
+				any(UpdateUserRequest.class),
+				eq("user@example.com"),
+				eq(true))).thenReturn(response);
 
 		mockMvc.perform(put("/users/1")
 				.with(httpBasic("user@example.com", "password123"))
@@ -143,19 +152,20 @@ class UserControllerTest {
 
 	@Test
 	void deleteUserReturnsNoContent() throws Exception {
-		doNothing().when(userService).deleteUser(1L);
+		doNothing().when(userService).deleteUser(1L, "user@example.com", true);
 
 		mockMvc.perform(delete("/users/1")
 				.with(httpBasic("user@example.com", "password123")))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
-		verify(userService).deleteUser(1L);
+		verify(userService).deleteUser(1L, "user@example.com", true);
 	}
 
 	@Test
 	void deleteUserReturnsNotFoundError() throws Exception {
-		doThrow(new UserNotFoundException(1L)).when(userService).deleteUser(1L);
+		doThrow(new UserNotFoundException(1L))
+				.when(userService).deleteUser(1L, "user@example.com", true);
 
 		mockMvc.perform(delete("/users/1")
 				.with(httpBasic("user@example.com", "password123")))

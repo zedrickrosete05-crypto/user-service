@@ -57,10 +57,10 @@ class UserServiceIntegrationTest {
 				.andExpect(jsonPath("$.email").value("integration@example.com"))
 				.andExpect(jsonPath("$.name").value("Integration User"));
 
-		mockMvc.perform(get("/users")
+		mockMvc.perform(get("/users/1")
 				.with(httpBasic("integration@example.com", "password123")))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].email").value("integration@example.com"));
+				.andExpect(jsonPath("$.email").value("integration@example.com"));
 
 		mockMvc.perform(put("/users/1")
 				.with(httpBasic("integration@example.com", "password123"))

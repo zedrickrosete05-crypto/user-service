@@ -81,6 +81,17 @@ HTTP Basic is the current authentication placeholder; JWT can replace it without
 changing the protected route structure. CORS allows `http://localhost:3000` by default.
 Set `CORS_ALLOWED_ORIGINS` to a comma-separated list of trusted frontend origins.
 
+JWT login is available at `/auth/login`:
+
+```powershell
+$body = '{"email":"user@example.com","password":"password123"}'
+$token = (curl.exe -sS -X POST http://localhost:8080/auth/login `
+  -H "Content-Type: application/json" -d $body | ConvertFrom-Json).accessToken
+curl.exe -H "Authorization: Bearer $token" http://localhost:8080/users
+```
+
+Set `JWT_SECRET` to a Base64-encoded secret in non-development environments.
+
 ## Actuator
 
 Available endpoints:

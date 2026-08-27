@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/users")
@@ -35,25 +36,31 @@ public class UserController {
 	}
 
 	@GetMapping
-	public List<UserResponse> getUsers() {
-		return userService.getUsers();
+	public List<UserResponse> getUsers(Authentication authentication) {
+		return userService.getUsers(isAdmin(authentication));
 	}
 
 	@GetMapping("/{id}")
-	public UserResponse getUser(@PathVariable Long id) {
-		return userService.getUser(id);
+	public UserResponse getUser(@PathVariable Long id, Authentication authentication) {
+		return userService.getUser(id, authentication.getName(), isAdmin(authentication));
 	}
 
 	@PutMapping("/{id}")
 	public UserResponse updateUser(
 			@PathVariable Long id,
-			@Valid @RequestBody UpdateUserRequest request) {
-		return userService.updateUser(id, request);
+			@Valid @RequestBody UpdateUserRequest request,
+			Authentication authentication) {
+		return userService.updateUser(id, request, authentication.getName(), isAdmin(authentication));
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-		userService.deleteUser(id);
+	public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication authentication) {
+		userService.deleteUser(id, authentication.getName(), isAdmin(authentication));
 		return ResponseEntity.noContent().build();
+	}
+
+	private boolean isAdmin(Authentication authentication) {
+		return authentication.getAuthorities().stream()
+				.anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
 	}
 }

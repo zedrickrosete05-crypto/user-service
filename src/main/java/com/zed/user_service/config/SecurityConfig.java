@@ -1,6 +1,7 @@
 package com.zed.user_service.config;
 
 import com.zed.user_service.user.UserRepository;
+import com.zed.user_service.auth.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -10,6 +11,8 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -23,12 +26,14 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
-			CorsConfigurationSource corsConfigurationSource) throws Exception {
+			CorsConfigurationSource corsConfigurationSource,
+			JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
 		http
 				.csrf(csrf -> csrf.disable())
 				.cors(cors -> cors.configurationSource(corsConfigurationSource))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(HttpMethod.POST, "/users").permitAll()
+						.requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
 						.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 						.requestMatchers("/actuator/**").authenticated()
 						.requestMatchers(
@@ -36,6 +41,8 @@ public class SecurityConfig {
 								"/swagger-ui/**",
 								"/swagger-ui.html").permitAll()
 						.anyRequest().authenticated())
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.httpBasic(Customizer.withDefaults());
 		return http.build();
 	}
@@ -63,7 +70,7 @@ public class SecurityConfig {
 		return username -> userRepository.findByEmail(username)
 				.map(user -> User.withUsername(user.getEmail())
 						.password(user.getPasswordHash())
-						.roles("USER")
+						.roles(user.getRole().name())
 						.build())
 				.orElseThrow(() -> new UsernameNotFoundException("User not found"));
 	}
