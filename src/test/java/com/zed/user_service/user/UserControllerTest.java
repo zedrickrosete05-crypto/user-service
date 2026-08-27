@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -91,6 +92,12 @@ class UserControllerTest {
 	}
 
 	@Test
+	void getUsersRequiresAuthentication() throws Exception {
+		mockMvc.perform(get("/users"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
 	void getUsersReturnsUsers() throws Exception {
 		when(userService.getUsers()).thenReturn(List.of(response(1L)));
 
@@ -98,6 +105,15 @@ class UserControllerTest {
 				.with(httpBasic("user@example.com", "password123")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].id").value(1));
+	}
+
+	@Test
+	void corsAllowsConfiguredFrontendOrigin() throws Exception {
+		mockMvc.perform(options("/users")
+				.header("Origin", "http://localhost:3000")
+				.header("Access-Control-Request-Method", "GET"))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"));
 	}
 
 	@Test

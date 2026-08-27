@@ -53,6 +53,10 @@ with the registered email and password:
 curl.exe -u user@example.com:password123 http://localhost:8080/users
 ```
 
+HTTP Basic is the current authentication placeholder; JWT can replace it without
+changing the protected route structure. CORS allows `http://localhost:3000` by default.
+Set `CORS_ALLOWED_ORIGINS` to a comma-separated list of trusted frontend origins.
+
 ## Actuator
 
 Available endpoints:
