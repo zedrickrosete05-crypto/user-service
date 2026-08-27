@@ -32,6 +32,30 @@ Start the application:
 
 Flyway applies migrations from `src/main/resources/db/migration` on startup. Hibernate validates the schema without modifying it.
 
+## Run with Docker Compose
+
+Build the application image and start the app with MySQL:
+
+```powershell
+docker compose up --build -d
+```
+
+The API is available at `http://localhost:8080`. Check the application health:
+
+```powershell
+curl.exe http://localhost:8080/actuator/health
+```
+
+Stop the stack:
+
+```powershell
+docker compose down
+```
+
+Container probes are available at `/actuator/health/liveness` and
+`/actuator/health/readiness`. Prometheus metrics are exposed at
+`/actuator/prometheus` and structured ECS JSON logs are emitted to the console.
+
 ## API documentation
 
 Swagger UI:

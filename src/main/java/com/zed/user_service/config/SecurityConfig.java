@@ -29,7 +29,7 @@ public class SecurityConfig {
 				.cors(cors -> cors.configurationSource(corsConfigurationSource))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(HttpMethod.POST, "/users").permitAll()
-						.requestMatchers("/actuator/health").permitAll()
+						.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 						.requestMatchers("/actuator/**").authenticated()
 						.requestMatchers(
 								"/v3/api-docs/**",

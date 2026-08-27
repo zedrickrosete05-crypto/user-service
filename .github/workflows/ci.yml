@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_docker:
+        description: Build the Docker image
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Build, test, and package
+        run: |
+          chmod +x mvnw
+          ./mvnw -B clean verify
+
+      - name: Upload packaged application
+        uses: actions/upload-artifact@v4
+        with:
+          name: user-service-jar
+          path: target/user-service-*.jar
+          if-no-files-found: error
+
+  docker-build:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_docker }}
+    runs-on: ubuntu-latest
+    needs: build-test-package
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --tag user-service:${{ github.sha }} .
