@@ -10,12 +10,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.zed.user_service.common.GlobalExceptionHandler;
+import com.zed.user_service.config.PasswordConfig;
+import com.zed.user_service.config.SecurityConfig;
 import com.zed.user_service.user.dto.CreateUserRequest;
 import com.zed.user_service.user.dto.UpdateUserRequest;
 import com.zed.user_service.user.dto.UserResponse;
@@ -27,11 +30,18 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(UserController.class)
-@org.springframework.context.annotation.Import(GlobalExceptionHandler.class)
+@org.springframework.context.annotation.Import({
+		GlobalExceptionHandler.class,
+		PasswordConfig.class,
+		SecurityConfig.class
+})
 class UserControllerTest {
 
 	@Autowired
@@ -42,6 +52,18 @@ class UserControllerTest {
 
 	@MockitoBean
 	private UserService userService;
+
+	@MockitoBean
+	private UserDetailsService userDetailsService;
+
+	@org.junit.jupiter.api.BeforeEach
+	void setUpAuthentication() {
+		when(userDetailsService.loadUserByUsername("user@example.com"))
+				.thenReturn(User.withUsername("user@example.com")
+						.password(new BCryptPasswordEncoder().encode("password123"))
+						.roles("USER")
+						.build());
+	}
 
 	@Test
 	void createUserReturnsCreatedResponse() throws Exception {
@@ -72,7 +94,8 @@ class UserControllerTest {
 	void getUsersReturnsUsers() throws Exception {
 		when(userService.getUsers()).thenReturn(List.of(response(1L)));
 
-		mockMvc.perform(get("/users"))
+		mockMvc.perform(get("/users")
+				.with(httpBasic("user@example.com", "password123")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].id").value(1));
 	}
@@ -81,7 +104,8 @@ class UserControllerTest {
 	void getUserReturnsNotFoundError() throws Exception {
 		when(userService.getUser(1L)).thenThrow(new UserNotFoundException(1L));
 
-		mockMvc.perform(get("/users/1"))
+		mockMvc.perform(get("/users/1")
+				.with(httpBasic("user@example.com", "password123")))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.status").value(404))
 				.andExpect(jsonPath("$.path").value("/users/1"));
@@ -93,6 +117,7 @@ class UserControllerTest {
 		when(userService.updateUser(eq(1L), any(UpdateUserRequest.class))).thenReturn(response);
 
 		mockMvc.perform(put("/users/1")
+				.with(httpBasic("user@example.com", "password123"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(
 						new UpdateUserRequest("user@example.com", "Jane", "password123"))))
@@ -104,7 +129,8 @@ class UserControllerTest {
 	void deleteUserReturnsNoContent() throws Exception {
 		doNothing().when(userService).deleteUser(1L);
 
-		mockMvc.perform(delete("/users/1"))
+		mockMvc.perform(delete("/users/1")
+				.with(httpBasic("user@example.com", "password123")))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
@@ -115,7 +141,8 @@ class UserControllerTest {
 	void deleteUserReturnsNotFoundError() throws Exception {
 		doThrow(new UserNotFoundException(1L)).when(userService).deleteUser(1L);
 
-		mockMvc.perform(delete("/users/1"))
+		mockMvc.perform(delete("/users/1")
+				.with(httpBasic("user@example.com", "password123")))
 				.andExpect(status().isNotFound());
 	}
 

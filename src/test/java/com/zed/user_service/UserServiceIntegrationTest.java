@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -56,24 +57,29 @@ class UserServiceIntegrationTest {
 				.andExpect(jsonPath("$.email").value("integration@example.com"))
 				.andExpect(jsonPath("$.name").value("Integration User"));
 
-		mockMvc.perform(get("/users"))
+		mockMvc.perform(get("/users")
+				.with(httpBasic("integration@example.com", "password123")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].email").value("integration@example.com"));
 
 		mockMvc.perform(put("/users/1")
+				.with(httpBasic("integration@example.com", "password123"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(updateRequest))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.email").value("updated@example.com"));
 
-		mockMvc.perform(get("/users/1"))
+		mockMvc.perform(get("/users/1")
+				.with(httpBasic("updated@example.com", "password456")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.name").value("Updated User"));
 
-		mockMvc.perform(delete("/users/1"))
+		mockMvc.perform(delete("/users/1")
+				.with(httpBasic("updated@example.com", "password456")))
 				.andExpect(status().isNoContent());
 
-		mockMvc.perform(get("/users/1"))
+		mockMvc.perform(get("/users/1")
+				.with(httpBasic("updated@example.com", "password456")))
 				.andExpect(status().isNotFound());
 	}
 

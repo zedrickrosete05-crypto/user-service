@@ -46,6 +46,13 @@ OpenAPI JSON:
 http://localhost:8080/v3/api-docs
 ```
 
+User registration is public. All other `/users` endpoints use HTTP Basic authentication
+with the registered email and password:
+
+```powershell
+curl.exe -u user@example.com:password123 http://localhost:8080/users
+```
+
 ## Actuator
 
 Available endpoints:
@@ -63,7 +70,7 @@ Create a user:
 ```powershell
 curl.exe -X POST http://localhost:8080/users `
   -H "Content-Type: application/json" `
-  -d '{\"email\":\"user@example.com\",\"name\":\"Jane Doe\",\"password\":\"password123\"}'
+  -d '{"email":"user@example.com","name":"Jane Doe","password":"password123"}'
 ```
 
 List users:
@@ -83,7 +90,7 @@ Update a user:
 ```powershell
 curl.exe -X PUT http://localhost:8080/users/1 `
   -H "Content-Type: application/json" `
-  -d '{\"email\":\"updated@example.com\",\"name\":\"Jane Updated\",\"password\":\"password456\"}'
+  -d '{"email":"updated@example.com","name":"Jane Updated","password":"password456"}'
 ```
 
 Delete a user:
