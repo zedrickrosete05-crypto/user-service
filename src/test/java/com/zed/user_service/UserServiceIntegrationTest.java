@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -16,16 +18,14 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers(disabledWithoutDocker = true)
+@EnabledIf("isIntegrationEnvironmentAvailable")
 class UserServiceIntegrationTest {
 
-	@Container
 	static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.4")
 			.withDatabaseName("user_service")
 			.withUsername("user_service")
@@ -36,9 +36,41 @@ class UserServiceIntegrationTest {
 
 	@DynamicPropertySource
 	static void configureDatasource(DynamicPropertyRegistry registry) {
-		registry.add("spring.datasource.url", mysql::getJdbcUrl);
-		registry.add("spring.datasource.username", mysql::getUsername);
-		registry.add("spring.datasource.password", mysql::getPassword);
+		if (!usesCiMySql()) {
+			mysql.start();
+		}
+		registry.add("spring.datasource.url", () -> usesCiMySql()
+				? environmentValue("DB_URL")
+				: mysql.getJdbcUrl());
+		registry.add("spring.datasource.username", () -> usesCiMySql()
+				? environmentValue("DB_USERNAME")
+				: mysql.getUsername());
+		registry.add("spring.datasource.password", () -> usesCiMySql()
+				? environmentValue("DB_PASSWORD")
+				: mysql.getPassword());
+	}
+
+	@AfterAll
+	static void stopLocalMySqlContainer() {
+		if (!usesCiMySql() && mysql.isRunning()) {
+			mysql.stop();
+		}
+	}
+
+	private static boolean usesCiMySql() {
+		return Boolean.parseBoolean(System.getenv("CI_MYSQL"));
+	}
+
+	static boolean isIntegrationEnvironmentAvailable() {
+		return usesCiMySql() || DockerClientFactory.instance().isDockerAvailable();
+	}
+
+	private static String environmentValue(String name) {
+		String value = System.getenv(name);
+		if (value == null || value.isBlank()) {
+			throw new IllegalStateException(name + " must be set when CI_MYSQL is enabled");
+		}
+		return value;
 	}
 
 	@Test

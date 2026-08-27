@@ -19,6 +19,21 @@ permissions:
 jobs:
   build-test-package:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: user_service
+          MYSQL_USER: user_service
+          MYSQL_PASSWORD: user_service_password
+          MYSQL_ROOT_PASSWORD: root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uuser_service -puser_service_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -31,6 +46,11 @@ jobs:
           cache: maven
 
       - name: Build, test, and package
+        env:
+          CI_MYSQL: "true"
+          DB_URL: jdbc:mysql://127.0.0.1:3306/user_service
+          DB_USERNAME: user_service
+          DB_PASSWORD: user_service_password
         run: |
           chmod +x mvnw
           ./mvnw -B clean verify
